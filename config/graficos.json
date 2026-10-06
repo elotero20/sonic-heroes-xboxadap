@@ -1,0 +1,26 @@
+{
+  "Width": 0,
+  "Height": 0,
+  "BorderlessWindowed": true,
+  "CenterWindow": true,
+  "ResizableWindowed": false,
+  "AspectRatioLimit": 1.3333334,
+  "HighAspectRatioCrashFix": true,
+  "Disable2PFrameskip": true,
+  "StupidlyFastLoadTimes": true,
+  "DontSlowdownOnFocusLost": true,
+  "NoSubtitles": false,
+  "DefaultSettings": {
+    "Fullscreen": false,
+    "Language": "English",
+    "SFXVolume": 100,
+    "BGMVolume": 100,
+    "ThreeDimensionalSound": true,
+    "SFXOn": true,
+    "BGMOn": true,
+    "SoftShadows": true,
+    "MouseControl": -1,
+    "CharmyShutup": false,
+    "Fog": true
+  }
+}

@@ -1,0 +1,18 @@
+# Los archivos del juego son propiedad de SEGA: nunca se suben a este repo.
+*.7z
+*.zip
+*.exe
+*.dll
+*.sys
+*.bin
+*.cue
+*.one
+*.adx
+*.sfd
+dvdroot/
+Game Files/
+
+# Lo que genera/descarga instalar.ps1
+Reloaded-II/
+_descargas/
+*.lnk

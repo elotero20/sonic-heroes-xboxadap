@@ -1,0 +1,9 @@
+{
+  "LeftStickXDeadzone": { "DeadzonePercent": 12.0, "RadiusPercent": 100.0, "IsInverted": false },
+  "LeftStickYDeadzone": { "DeadzonePercent": 12.0, "RadiusPercent": 100.0, "IsInverted": false },
+  "RightStickXDeadzone": { "DeadzonePercent": 12.0, "RadiusPercent": 100.0, "IsInverted": false },
+  "RightStickYDeadzone": { "DeadzonePercent": 12.0, "RadiusPercent": 100.0, "IsInverted": false },
+  "LeftTriggerDeadzone": { "DeadzonePercent": 10.0, "RadiusPercent": 100.0, "IsInverted": false },
+  "RightTriggerDeadzone": { "DeadzonePercent": 10.0, "RadiusPercent": 100.0, "IsInverted": false },
+  "SwapTriggers": false
+}
