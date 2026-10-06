@@ -4,6 +4,7 @@ Adaptación de **Sonic Heroes para PC (2004)** para jugarlo con un control **Xbo
 
 - botones equivalentes a los del control de **GameCube**;
 - gatillos analógicos para la cámara;
+- teclado como alternativa cuando el control está apagado;
 - pantalla ancha **16:9**;
 - un análisis de seguridad de lo que se descargó.
 
@@ -53,8 +54,8 @@ La carpeta `Sonic_Heroes_Win_Files_EN\` de OneDrive (la extracción incompleta) 
 
 - ✅ Juego completo en `C:\Juegos\Sonic Heroes` (3,915 archivos) y `Tsonic_win.exe` en la versión compatible.
 - ✅ .NET 9.0.20 (x64 y x86) instalado.
-- ✅ El acceso directo abre el juego a través de Reloaded-II, y los **5 mods se cargan dentro del juego sin errores** (según el log de Reloaded-II, en 2.3 s).
-- ⏳ **Falta probar el juego con el control.** La primera prueba se cerró antes de que apareciera la ventana del juego.
+- ✅ El acceso directo abre el juego a través de Reloaded-II, y los **5 mods se cargan dentro del juego sin errores** (según el log de Reloaded-II).
+- ✅ **Probado en el juego el 6 de octubre de 2026.** La ventana aparece en unos 8 segundos, sin bordes y a 2560×1440 en el monitor LG. **El control Xbox y el teclado funcionan.**
 
 ---
 
@@ -64,7 +65,20 @@ La carpeta `Sonic_Heroes_Win_Files_EN\` de OneDrive (la extracción incompleta) 
 2. Abre **"Sonic Heroes (Xbox)"** en el escritorio. También está en `C:\Juegos\Sonic Heroes\Jugar Sonic Heroes (Xbox).lnk`.
 3. Para salir, usa el menú del juego o `Alt+F4`.
 
-> Mientras los mods están activos, el **teclado no controla el juego**: todo pasa por el control Xbox. Si algún día quieres jugar con teclado, abre `C:\Juegos\Sonic Heroes\Launcher.exe` (el configurador original de SEGA, sin mods).
+La pantalla de título dice *"PRESS ENTER KEY"* porque es la versión de PC. Con el control, pulsa **A** o **Menú (≡)**.
+
+Los niveles 3D se ven en 16:9. Los menús 2D y los videos siguen en 4:3, con franjas a los lados; es normal.
+
+### ⌨️ Teclado como alternativa
+
+El teclado también funciona.
+
+- **Con el control apagado o desconectado,** el teclado controla todo (Enter para empezar).
+- **Con el control conectado,** funcionan los botones de los dos, pero para moverte mandan los sticks del control y las flechas no mueven al personaje.
+
+Para cambiar las teclas, abre `C:\Juegos\Sonic Heroes\Launcher.exe` (el configurador original de SEGA) y ve a *Controller setting*. Después ciérralo y juega con el acceso directo de siempre.
+
+El **mouse** está desactivado, porque en este juego es muy incómodo.
 
 ## Controles (estilo GameCube)
 
@@ -108,7 +122,7 @@ Ninguna opción vuelve a extraer el juego: lo que ya está hecho se omite.
 | `control-xbox-estilo-gamecube.json` | Botones del control Xbox. Los valores son nombres de XInput: `A`, `B`, `X`, `Y`, `LeftShoulder`, `RightShoulder`, `Back`, `Start`, `DPadUp`… Para asignar varios botones a una acción, sepáralos con coma. |
 | `zona-muerta.json` | Zona muerta (%) de sticks y gatillos, invertir ejes, intercambiar gatillos. |
 | `graficos.json` | Resolución, ventana o pantalla completa, idioma, volumen, sombras, subtítulos. |
-| `controller-hook.json` | `UseOriginalInputs: true` permite usar también el teclado (puede duplicar entradas). |
+| `controller-hook.json` | `UseOriginalInputs: true` (valor por defecto) permite usar también el teclado. Con `false`, el juego solo responde al control Xbox. |
 
 ## Instalar en otra PC
 
@@ -131,6 +145,8 @@ El script se puede ejecutar las veces que quieras. Todas las descargas tienen ve
 |---|---|
 | El control no responde | Ábrelo siempre con el acceso directo **"Sonic Heroes (Xbox)"**, no con `Tsonic_win.exe`. Comprueba que Windows ve el control en *Configuración → Bluetooth y dispositivos*. |
 | El personaje o la cámara se mueven solos | Sube `DeadzonePercent` en `zona-muerta.json` (por ejemplo, a 18) y ejecuta `.\instalar.ps1 -RestablecerConfiguracion`. |
+| El teclado no mueve al personaje | Apaga o desconecta el control: mientras está conectado, mandan sus sticks. |
+| Una acción se activa dos veces o hay botones raros | Pon `UseOriginalInputs` en `false` en `config/controller-hook.json` y ejecuta `.\instalar.ps1 -RestablecerConfiguracion`. Esto desactiva el teclado. |
 | El juego abre en la pantalla equivocada | El juego se abre en la **pantalla principal** de Windows (*Configuración → Pantalla → "Convertir en la pantalla principal"*). |
 | Aparece "Falta .NET 9 Desktop Runtime" | Vuelve a ejecutar `instalar.cmd`. |
 | Quiero ver qué hacen los mods | Hay logs en `%APPDATA%\Reloaded-Mod-Loader-II\Logs`. |

@@ -425,4 +425,6 @@ Write-Host @'
   X .................... acción           B ......... formación der. / atrás
   Y .................... formación izq.   RB o LB ... Team Blast
   LT / RT .............. girar cámara     Menú (≡) .. pausa
+
+  Teclado: funciona como alternativa con el control apagado (teclas en Launcher.exe).
 '@
