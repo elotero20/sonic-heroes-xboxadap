@@ -18,7 +18,9 @@
     El ejecutable del juego NO se modifica: los mods se cargan en memoria al iniciar.
 
 .PARAMETER Archivo7z
-    Ruta de Sonic_Heroes_Win_Files_EN.7z. Por defecto se busca en la carpeta que contiene este repo.
+    Ruta de Sonic_Heroes_Win_Files_EN.7z. Si no se indica, se busca dentro de este repo, en la carpeta
+    que lo contiene y en Descargas; si no aparece, se abre una ventana para elegirlo.
+    En Windows 10 (cuyo tar.exe no abre .7z) se usa 7-Zip si está instalado.
 
 .PARAMETER Destino
     Carpeta de instalación. Por defecto C:\Juegos\Sonic Heroes (fuera de OneDrive).
@@ -78,12 +80,12 @@ $ProgressPreference = 'SilentlyContinue'   # Invoke-WebRequest es muy lento con 
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 $RepoDir = $PSScriptRoot
-if (-not $Archivo7z) { $Archivo7z = Join-Path (Split-Path -Parent $RepoDir) 'Sonic_Heroes_Win_Files_EN.7z' }
 $Destino = [IO.Path]::GetFullPath($Destino.TrimEnd('\'))
 $ExeJuego = Join-Path $Destino 'Tsonic_win.exe'
 $Reloaded = Join-Path $Destino 'Reloaded-II'
 $CarpetaDescargas = Join-Path $Destino '_descargas'
 $TarExe = Join-Path $env:SystemRoot 'System32\tar.exe'
+$SieteZip = $null   # ruta de 7z.exe cuando tar.exe no puede abrir .7z (Windows 10)
 # Con -Ancho/-Alto la resolución queda fija; si no, jugar.ps1 la ajusta a la pantalla principal en cada arranque.
 $ResolucionFija = $PSBoundParameters.ContainsKey('Ancho') -or $PSBoundParameters.ContainsKey('Alto')
 
@@ -144,6 +146,74 @@ function Expand-ConTar([string]$Archivo, [string]$Salida, [string[]]$Extra = @()
     $argumentos = @('-xf', $Archivo, '-C', $Salida) + $Extra
     & $TarExe @argumentos
     if ($LASTEXITCODE -ne 0) { throw "No se pudo extraer $(Split-Path -Leaf $Archivo) (tar.exe terminó con código $LASTEXITCODE)." }
+}
+
+# Extrae un .zip o .7z completo: con 7-Zip si se está usando (Windows 10), si no con tar.exe.
+function Expand-Archivo([string]$Archivo, [string]$Salida) {
+    if ($SieteZip -and $Archivo.EndsWith('.7z')) {
+        $null = New-Item -ItemType Directory -Force -Path $Salida
+        & $SieteZip x -y -bso0 -bsp0 "-o$Salida" -- $Archivo
+        if ($LASTEXITCODE -ne 0) { throw "No se pudo extraer $(Split-Path -Leaf $Archivo) (7-Zip terminó con código $LASTEXITCODE)." }
+    } else {
+        Expand-ConTar $Archivo $Salida
+    }
+}
+
+# Contenido de un archivo dentro de un .zip/.7z, como texto.
+function Read-DeArchivo([string]$Archivo, [string]$Interno) {
+    if ($SieteZip -and $Archivo.EndsWith('.7z')) { return (& $SieteZip e -so -- $Archivo $Interno) -join "`n" }
+    return (& $TarExe -xOf $Archivo $Interno) -join "`n"
+}
+
+function Get-SieteZip {
+    foreach ($ruta in @("$env:ProgramFiles\7-Zip\7z.exe", "${env:ProgramFiles(x86)}\7-Zip\7z.exe")) {
+        if (Test-Path -LiteralPath $ruta) { return $ruta }
+    }
+    $comando = Get-Command 7z.exe -ErrorAction SilentlyContinue
+    if ($comando) { return $comando.Source }
+    return $null
+}
+
+# Lista un .7z con 7-Zip en el mismo formato que "tar -tf": separador '/' y carpetas terminadas en '/'.
+function Get-Listado7z([string]$Archivo) {
+    $salida = & $SieteZip l -slt -ba -- $Archivo
+    if ($LASTEXITCODE -ne 0) { throw "7-Zip no pudo leer $Archivo." }
+    $lista = New-Object System.Collections.Generic.List[string]
+    $ruta = $null; $esCarpeta = $false
+    foreach ($linea in @($salida) + 'Path = ') {
+        if ($linea.StartsWith('Path = ')) {
+            if ($ruta) { if ($esCarpeta) { $lista.Add("$ruta/") } else { $lista.Add($ruta) } }
+            $ruta = $linea.Substring(7).Replace('\', '/'); $esCarpeta = $false
+        } elseif ($linea -eq 'Folder = +') {
+            $esCarpeta = $true
+        } elseif ($linea.StartsWith('Attributes = ')) {
+            # Letras de Windows (R H S D A...) antes de los permisos Unix, p. ej. "RD_ drwxr-xr-x".
+            $esCarpeta = $esCarpeta -or $linea.Substring(13).Split(' _'.ToCharArray())[0].Contains('D')
+        }
+    }
+    return $lista
+}
+
+# Busca el .7z del juego dentro del repo, en la carpeta que lo contiene y en Descargas; si no está, pide elegirlo.
+function Find-Archivo7z {
+    $nombre = 'Sonic_Heroes_Win_Files_EN.7z'
+    $descargas = $null
+    try { $descargas = (New-Object -ComObject Shell.Application).Namespace('shell:Downloads').Self.Path } catch { }
+    foreach ($carpeta in @($RepoDir, (Split-Path -Parent $RepoDir), $descargas, (Join-Path $env:USERPROFILE 'Downloads'))) {
+        if (-not $carpeta) { continue }
+        $ruta = Join-Path $carpeta $nombre
+        if (Test-Path -LiteralPath $ruta) { return $ruta }
+    }
+    Write-Host "    No encontré $nombre. Elígelo en la ventana que se abrió..." -ForegroundColor Yellow
+    Add-Type -AssemblyName System.Windows.Forms
+    $dialogo = New-Object System.Windows.Forms.OpenFileDialog
+    $dialogo.Title = "Elige el archivo del juego: $nombre"
+    $dialogo.Filter = "Archivo del juego (*.7z)|*.7z|Todos los archivos (*.*)|*.*"
+    if ($descargas) { $dialogo.InitialDirectory = $descargas }
+    $ventana = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true }   # para que el diálogo salga al frente
+    try { $resultado = $dialogo.ShowDialog($ventana) } finally { $ventana.Dispose() }
+    if ($resultado -ne [System.Windows.Forms.DialogResult]::OK) { return $null }
+    return $dialogo.FileName
 }
 
 function Get-Componente($Componente) {
@@ -223,10 +293,23 @@ if (Get-Process -Name 'Tsonic_win' -ErrorAction SilentlyContinue) { throw 'Sonic
 
 # --- 1. Archivos del juego ------------------------------------------------------------------
 Write-Paso '1/7  Archivos del juego'
-if (-not (Test-Path -LiteralPath $Archivo7z)) { throw "No encuentro el archivo del juego: $Archivo7z`nIndica la ruta con -Archivo7z." }
-if (-not (Test-Path -LiteralPath $TarExe)) { throw 'No se encontró tar.exe de Windows (viene con Windows 10 1803+ / Windows 11).' }
-$listado = & $TarExe -tf $Archivo7z
-if ($LASTEXITCODE -ne 0 -or -not $listado) { throw "tar.exe no pudo leer $Archivo7z. Se necesita Windows 11, o extraer el .7z con 7-Zip." }
+if (-not $Archivo7z) { $Archivo7z = Find-Archivo7z }
+if (-not $Archivo7z -or -not (Test-Path -LiteralPath $Archivo7z)) {
+    throw 'No se encontró el archivo del juego (Sonic_Heroes_Win_Files_EN.7z). Ponlo en Descargas o indica la ruta con -Archivo7z.'
+}
+Write-Ok "Archivo del juego: $Archivo7z"
+$listado = @()
+if (Test-Path -LiteralPath $TarExe) {
+    $listado = @(& $TarExe -tf $Archivo7z)
+    if ($LASTEXITCODE -ne 0) { $listado = @() }
+}
+if ($listado.Count -eq 0) {
+    # El tar.exe de Windows 10 no abre .7z: a partir de aquí se usa 7-Zip para todos los .7z.
+    $SieteZip = Get-SieteZip
+    if (-not $SieteZip) { throw 'Este Windows no puede abrir archivos .7z por sí solo. Instala 7-Zip (https://www.7-zip.org) y vuelve a ejecutar el instalador.' }
+    Write-Ok "Se usará 7-Zip para abrir los .7z ($SieteZip)"
+    $listado = @(Get-Listado7z $Archivo7z)
+}
 
 $prefijo = 'Sonic_Heroes_Win_Files_EN/Game Files/'
 $esperados = @($listado | Where-Object { $_.StartsWith($prefijo) -and -not $_.EndsWith('/') } |
@@ -241,8 +324,19 @@ if ($faltan.Count -eq 0) {
     $libreGB = [math]::Round((Get-PSDrive -Name $Destino.Substring(0, 1)).Free / 1GB, 1)
     if ($libreGB -lt 2) { throw "Espacio libre insuficiente en $($Destino.Substring(0, 2)) ($libreGB GB; se necesitan ~2 GB)." }
     Write-Host "    Extrayendo $($esperados.Count) archivos (puede tardar unos minutos)..."
-    $exclusiones = $ArchivosOmitidos | ForEach-Object { '--exclude'; "$prefijo$_" }
-    Expand-ConTar $Archivo7z $Destino (@('--strip-components', '2') + $exclusiones + @($prefijo.TrimEnd('/')))
+    if ($SieteZip) {
+        # 7-Zip no puede quitar carpetas de la ruta al extraer: se extrae aparte y se mueve a su lugar.
+        $temporal = Join-Path $Destino '_extraccion'
+        Expand-Archivo $Archivo7z $temporal
+        $origen = Join-Path $temporal $prefijo.TrimEnd('/').Replace('/', '\')
+        $argumentosRobocopy = @($origen, $Destino, '/E', '/MOVE', '/NFL', '/NDL', '/NJH', '/NJS', '/NP', '/XF') + $ArchivosOmitidos
+        & robocopy.exe @argumentosRobocopy | Out-Null
+        if ($LASTEXITCODE -ge 8) { throw "No se pudieron mover los archivos del juego (robocopy terminó con código $LASTEXITCODE)." }
+        Remove-Item -LiteralPath $temporal -Recurse -Force
+    } else {
+        $exclusiones = $ArchivosOmitidos | ForEach-Object { '--exclude'; "$prefijo$_" }
+        Expand-ConTar $Archivo7z $Destino (@('--strip-components', '2') + $exclusiones + @($prefijo.TrimEnd('/')))
+    }
     $faltan = @($esperados | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Destino $_)) })
     if ($faltan.Count -gt 0) { throw "Faltan $($faltan.Count) archivos después de extraer (por ejemplo: $($faltan[0]))." }
     Write-Ok "Extraídos $($esperados.Count) archivos"
@@ -265,7 +359,7 @@ foreach ($componente in $componentesUsados) { $rutasDescargadas[$componente.Arch
 # --- 3. Reloaded-II y mods ------------------------------------------------------------------
 Write-Paso '3/7  Instalando Reloaded-II (modo portable) y mods'
 $loader = $componentesUsados | Where-Object { $_.Tipo -eq 'Loader' }
-Expand-ConTar $rutasDescargadas[$loader.Archivo] $Reloaded
+Expand-Archivo $rutasDescargadas[$loader.Archivo] $Reloaded
 # portable.txt hace que Reloaded-II guarde apps, mods y configuración dentro de su propia carpeta.
 [IO.File]::WriteAllText((Join-Path $Reloaded 'portable.txt'), "Reloaded-II en modo portable.`r`n")
 Write-Ok "$($loader.Nombre) en $Reloaded"
@@ -273,10 +367,10 @@ Write-Ok "$($loader.Nombre) en $Reloaded"
 $modsInstalados = @()
 foreach ($componente in ($componentesUsados | Where-Object { $_.Tipo -eq 'Mod' })) {
     $archivo = $rutasDescargadas[$componente.Archivo]
-    $modConfig = (& $TarExe -xOf $archivo 'ModConfig.json') -join "`n" | ConvertFrom-Json
+    $modConfig = Read-DeArchivo $archivo 'ModConfig.json' | ConvertFrom-Json
     $carpetaMod = Join-Path $Reloaded "Mods\$($modConfig.ModId)"
     if (Test-Path -LiteralPath $carpetaMod) { Remove-Item -LiteralPath $carpetaMod -Recurse -Force }
-    Expand-ConTar $archivo $carpetaMod
+    Expand-Archivo $archivo $carpetaMod
     $modsInstalados += $modConfig.ModId
     Write-Ok "$($modConfig.ModName) $($modConfig.ModVersion)"
 }
@@ -407,6 +501,7 @@ foreach ($arquitectura in 'x64', 'x86') {
 # --- 7. Accesos directos ----------------------------------------------------------------------
 Write-Paso '7/7  Lanzador y accesos directos'
 Copy-Item -LiteralPath (Join-Path $RepoDir 'jugar.ps1') -Destination (Join-Path $Destino 'jugar.ps1') -Force
+Unblock-File -LiteralPath (Join-Path $Destino 'jugar.ps1')   # si el repo se bajó como ZIP, quita la marca "descargado de internet"
 if ($ResolucionFija) { Write-Ok 'jugar.ps1 copiado (resolución fija)' } else { Write-Ok 'jugar.ps1 copiado (ajusta la resolución a la pantalla principal en cada arranque)' }
 New-AccesoDirecto (Join-Path $Destino 'Jugar Sonic Heroes (Xbox).lnk')
 Write-Ok "Creado en la carpeta del juego"

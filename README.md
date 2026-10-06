@@ -9,6 +9,8 @@ Adaptación de **Sonic Heroes para PC (2004)** para jugarlo con un control **Xbo
 - un análisis de seguridad de lo que se descargó.
 
 > **Este repositorio no contiene el juego.** Solo tiene scripts, configuración y documentación. Los archivos del juego son propiedad de SEGA y nunca se suben aquí (ver `.gitignore`).
+>
+> **¿Lo quieres instalar en otra computadora?** Sigue la guía [Instalar en otra PC (paso a paso)](#instalar-en-otra-pc-paso-a-paso).
 
 ---
 
@@ -124,14 +126,21 @@ Ninguna opción vuelve a extraer el juego: lo que ya está hecho se omite.
 | `graficos.json` | Resolución, ventana o pantalla completa, idioma, volumen, sombras, subtítulos. |
 | `controller-hook.json` | `UseOriginalInputs: true` (valor por defecto) permite usar también el teclado. Con `false`, el juego solo responde al control Xbox. |
 
-## Instalar en otra PC
+## Instalar en otra PC (paso a paso)
 
-Requisitos: Windows 11 (su `tar.exe` sabe abrir `.7z`), conexión a internet y el archivo `Sonic_Heroes_Win_Files_EN.7z`.
+Este repo **no incluye el juego**. Cada quien necesita su propia copia del archivo **`Sonic_Heroes_Win_Files_EN.7z`**, la versión "Files" de Sonic Heroes para PC, de unos 817 MB. El instalador se encarga de todo lo demás.
 
-1. Clona o descarga este repositorio. Pon `Sonic_Heroes_Win_Files_EN.7z` en la carpeta **que contiene** al repo, o indica la ruta con `-Archivo7z`.
-2. Haz doble clic en **`instalar.cmd`** y acepta el aviso de Windows si pide instalar .NET.
+**Necesitas:** Windows 10 u 11, internet y el archivo `Sonic_Heroes_Win_Files_EN.7z`. En Windows 10 también hace falta tener instalado [7-Zip](https://www.7-zip.org); Windows 11 ya sabe abrir archivos `.7z`.
 
-El script se puede ejecutar las veces que quieras. Todas las descargas tienen versión y SHA-256 fijos.
+1. **Baja este repo:** [descarga directa en ZIP](https://github.com/elotero20/sonic-heroes-xboxadap/archive/refs/heads/main.zip). También puedes usar el botón verde **Code → Download ZIP** de esta página.
+2. **Desbloquea el ZIP antes de abrirlo** (evita avisos de Windows): clic derecho en el ZIP → *Propiedades* → marca **Desbloquear** → *Aceptar*.
+3. **Descomprímelo:** clic derecho → *Extraer todo…*.
+4. **Pon `Sonic_Heroes_Win_Files_EN.7z` en tu carpeta *Descargas*.** También vale dentro de la carpeta descomprimida. Si no lo encuentra, el instalador abre una ventana para que lo elijas.
+5. **Doble clic en `instalar.cmd`.** Si Windows pregunta "¿Desea ejecutar este archivo?", elige *Ejecutar*.
+6. Acepta el aviso de Windows (UAC) para instalar **.NET 9** de Microsoft. Hay que hacerlo una o dos veces, solo la primera vez.
+7. Cuando diga **"Listo"**, abre **"Sonic Heroes (Xbox)"** en el escritorio. Se puede jugar con control Xbox o con teclado.
+
+El juego queda en `C:\Juegos\Sonic Heroes` y las partidas guardadas en `%APPDATA%\SEGA\SONICHEROES`. Puedes ejecutar el instalador las veces que quieras. Todas las descargas (Reloaded-II y los mods) tienen versión y SHA-256 fijos.
 
 ## Desinstalar
 
@@ -149,6 +158,8 @@ El script se puede ejecutar las veces que quieras. Todas las descargas tienen ve
 | Una acción se activa dos veces o hay botones raros | Pon `UseOriginalInputs` en `false` en `config/controller-hook.json` y ejecuta `.\instalar.ps1 -RestablecerConfiguracion`. Esto desactiva el teclado. |
 | El juego abre en la pantalla equivocada | El juego se abre en la **pantalla principal** de Windows (*Configuración → Pantalla → "Convertir en la pantalla principal"*). |
 | Aparece "Falta .NET 9 Desktop Runtime" | Vuelve a ejecutar `instalar.cmd`. |
+| El instalador dice que Windows no puede abrir `.7z` | Pasa en Windows 10. Instala [7-Zip](https://www.7-zip.org) y vuelve a ejecutar `instalar.cmd`. |
+| El instalador no encuentra el juego | Pon `Sonic_Heroes_Win_Files_EN.7z` en *Descargas* o elígelo en la ventana que abre el instalador. Tiene que ser la versión "Files", no el instalador `.exe` ni la ROM de CD. |
 | Quiero ver qué hacen los mods | Hay logs en `%APPDATA%\Reloaded-Mod-Loader-II\Logs`. |
 
 ## Estructura del repositorio
