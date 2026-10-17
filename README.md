@@ -42,8 +42,8 @@ El juego de PC no es compatible con **XInput**, el sistema que usan los controle
 
 ### 4. Ajustes de Windows (solo para este juego)
 
-- **Escala DPI:** tu laptop usa escala al 125 %. Marqué el juego para que maneje su propia escala; si no, la ventana se sale de la pantalla. Es lo mismo que *Propiedades → Compatibilidad → Cambiar configuración de PPP alto → Invalidar… : Aplicación*.
-- **Resolución automática:** el acceso directo abre el juego a la resolución de la **pantalla principal** de ese momento. Con el LG UltraGear: 2560×1440. Solo con la laptop: 1920×1080.
+- **Escala DPI:** tu laptop usa escala al 125 % y el segundo monitor al 150 %. Marqué el juego para que Windows lo escale; con otros modos, la imagen salía ampliada y recortada. Por eso el juego trabaja con la resolución "lógica" de la pantalla (1536×864 en una de 1920×1080 al 125 %) y se ve a pantalla completa. Es lo mismo que *Propiedades → Compatibilidad → Cambiar configuración de PPP alto → Invalidar… : Sistema*.
+- **Resolución automática:** el acceso directo abre el juego a la resolución de la pantalla elegida (la principal o la "pantalla 2"). Ejemplo: con el LG UltraGear, 2560×1440; solo con la laptop, 1920×1080.
 - Instalé **.NET 9 Desktop Runtime** (x64 y x86) de Microsoft, porque Reloaded-II lo necesita.
 
 ### 5. Limpieza
@@ -64,8 +64,17 @@ La carpeta `Sonic_Heroes_Win_Files_EN\` de OneDrive (la extracción incompleta) 
 ## 🎮 Cómo jugar
 
 1. Conecta el control Xbox (USB, Bluetooth o adaptador). Puedes hacerlo antes o con el juego abierto.
-2. Abre **"Sonic Heroes (Xbox)"** en el escritorio. También está en `C:\Juegos\Sonic Heroes\Jugar Sonic Heroes (Xbox).lnk`.
+2. Abre **"Sonic Heroes (Xbox)"** en el escritorio, o busca **"Sonic Heroes"** en el menú Inicio. También está en `C:\Juegos\Sonic Heroes`.
 3. Para salir, usa el menú del juego o `Alt+F4`.
+
+**¿En qué pantalla?** El juego no tiene un ajuste para eso, así que lo eliges con el acceso directo:
+
+| Acceso directo | Dónde se abre |
+|---|---|
+| "Sonic Heroes (Xbox)" / "Sonic Heroes" | En la **pantalla principal** de Windows |
+| "… - pantalla 2" | En la **otra pantalla**, si hay un segundo monitor conectado; si no, en la principal |
+
+En los dos casos el juego toma la resolución de esa pantalla.
 
 La pantalla de título dice *"PRESS ENTER KEY"* porque es la versión de PC. Con el control, pulsa **A** o **Menú (≡)**.
 
@@ -156,7 +165,8 @@ El juego queda en `C:\Juegos\Sonic Heroes` y las partidas guardadas en `%APPDATA
 | El personaje o la cámara se mueven solos | Sube `DeadzonePercent` en `zona-muerta.json` (por ejemplo, a 18) y ejecuta `.\instalar.ps1 -RestablecerConfiguracion`. |
 | El teclado no mueve al personaje | Apaga o desconecta el control: mientras está conectado, mandan sus sticks. |
 | Una acción se activa dos veces o hay botones raros | Pon `UseOriginalInputs` en `false` en `config/controller-hook.json` y ejecuta `.\instalar.ps1 -RestablecerConfiguracion`. Esto desactiva el teclado. |
-| El juego abre en la pantalla equivocada | El juego se abre en la **pantalla principal** de Windows (*Configuración → Pantalla → "Convertir en la pantalla principal"*). |
+| El juego abre en la pantalla equivocada | Usa el acceso directo "… - pantalla 2" para la otra pantalla. El normal siempre abre en la **pantalla principal** de Windows (*Configuración → Pantalla*). |
+| Sale una ventana negra con texto `[Reloaded]` | Es el registro de los mods. El lanzador la oculta en cuanto aparece el juego; si se queda, ciérrala o cambia al juego con `Alt+Tab`. |
 | Aparece "Falta .NET 9 Desktop Runtime" | Vuelve a ejecutar `instalar.cmd`. |
 | El instalador dice que Windows no puede abrir `.7z` | Pasa en Windows 10. Instala [7-Zip](https://www.7-zip.org) y vuelve a ejecutar `instalar.cmd`. |
 | El instalador no encuentra el juego | Pon `Sonic_Heroes_Win_Files_EN.7z` en *Descargas* o elígelo en la ventana que abre el instalador. Tiene que ser la versión "Files", no el instalador `.exe` ni la ROM de CD. |

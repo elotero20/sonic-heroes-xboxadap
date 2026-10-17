@@ -45,16 +45,24 @@ function Remove-APapelera([string]$Ruta) {
 
 if (Get-Process -Name 'Tsonic_win' -ErrorAction SilentlyContinue) { throw 'Sonic Heroes está abierto. Ciérralo primero.' }
 
-foreach ($acceso in @((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Sonic Heroes (Xbox).lnk'), (Join-Path $Destino 'Jugar Sonic Heroes (Xbox).lnk'))) {
-    if (Test-Path -LiteralPath $acceso) { Remove-Item -LiteralPath $acceso -Force; Write-Ok "Quitado: $acceso" }
+$accesos = @(
+    @{ Carpeta = [Environment]::GetFolderPath('Desktop'); Nombre = 'Sonic Heroes (Xbox)' }
+    @{ Carpeta = [Environment]::GetFolderPath('Programs'); Nombre = 'Sonic Heroes' }
+    @{ Carpeta = $Destino; Nombre = 'Jugar Sonic Heroes (Xbox)' }
+)
+foreach ($a in $accesos) {
+    foreach ($sufijo in '', ' - pantalla 2') {
+        $acceso = Join-Path $a.Carpeta "$($a.Nombre)$sufijo.lnk"
+        if (Test-Path -LiteralPath $acceso) { Remove-Item -LiteralPath $acceso -Force; Write-Ok "Quitado: $acceso" }
+    }
 }
 
 $capas = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers', $true)
 if ($capas) {
     try {
         $actual = [string]$capas.GetValue($ExeJuego, '')
-        if ($actual -match 'HIGHDPIAWARE') {
-            $resto = ($actual -replace '\s*HIGHDPIAWARE', '').Trim()
+        if ($actual -match 'HIGHDPIAWARE|DPIUNAWARE') {
+            $resto = ($actual -replace '\s*(HIGHDPIAWARE|DPIUNAWARE)', '').Trim()
             if ($resto -eq '~' -or -not $resto) { $capas.DeleteValue($ExeJuego) } else { $capas.SetValue($ExeJuego, $resto) }
             Write-Ok 'Quitado el ajuste de escala DPI de Tsonic_win.exe'
         }

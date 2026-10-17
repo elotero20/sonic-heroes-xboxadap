@@ -233,20 +233,16 @@ function Get-Componente($Componente) {
     return $ruta
 }
 
-# Resolución real de la pantalla principal, sin la escala DPI de Windows.
+# Resolución de la pantalla principal tal como la ve el juego (no consciente de DPI):
+# p. ej. 1536x864 en una pantalla de 1920x1080 al 125 %. Windows la escala a pantalla completa.
 function Get-ResolucionPantalla {
-    if (-not ('SonicHeroesXbox.Gdi' -as [type])) {
-        Add-Type -Namespace SonicHeroesXbox -Name Gdi -MemberDefinition @'
-[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
-[DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
-[DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-[DllImport("gdi32.dll")] public static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
-'@
+    if (-not ('SonicHeroesXbox.Dpi' -as [type])) {
+        Add-Type -Namespace SonicHeroesXbox -Name Dpi -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr contexto);'
     }
-    $null = [SonicHeroesXbox.Gdi]::SetProcessDPIAware()
-    $dc = [SonicHeroesXbox.Gdi]::GetDC([IntPtr]::Zero)
-    try { return @([SonicHeroesXbox.Gdi]::GetDeviceCaps($dc, 118), [SonicHeroesXbox.Gdi]::GetDeviceCaps($dc, 117)) }  # DESKTOPHORZRES, DESKTOPVERTRES
-    finally { $null = [SonicHeroesXbox.Gdi]::ReleaseDC([IntPtr]::Zero, $dc) }
+    Add-Type -AssemblyName System.Windows.Forms
+    $anterior = [SonicHeroesXbox.Dpi]::SetThreadDpiAwarenessContext([IntPtr](-1))   # DPI_AWARENESS_CONTEXT_UNAWARE
+    try { $area = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; return @($area.Width, $area.Height) }
+    finally { $null = [SonicHeroesXbox.Dpi]::SetThreadDpiAwarenessContext($anterior) }
 }
 
 # Reloaded-II 1.31 necesita Microsoft.WindowsDesktop.App 9.0.8 o superior (x64 para el launcher, x86 para el juego).
@@ -271,10 +267,11 @@ function Install-DesktopRuntime9([string]$Arquitectura) {
     if ($proceso.ExitCode -notin 0, 3010) { throw "El instalador de .NET terminó con código $($proceso.ExitCode)." }
 }
 
-# El acceso directo abre jugar.ps1 (ventana oculta), que ajusta la resolución y lanza Reloaded-II.
-function New-AccesoDirecto([string]$Ruta) {
+# El acceso directo abre jugar.ps1 (ventana oculta), que ajusta la resolución, lanza Reloaded-II
+# y coloca el juego en la pantalla indicada (1 = principal, 2 = la otra).
+function New-AccesoDirecto([string]$Ruta, [int]$Pantalla = 1) {
     $argumentos = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$(Join-Path $Destino 'jugar.ps1')`""
-    if ($ResolucionFija) { $argumentos += ' -ResolucionFija' }
+    if ($ResolucionFija) { $argumentos += ' -ResolucionFija' } elseif ($Pantalla -gt 1) { $argumentos += " -Pantalla $Pantalla" }
     $shell = New-Object -ComObject WScript.Shell
     $acceso = $shell.CreateShortcut($Ruta)
     $acceso.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
@@ -473,16 +470,18 @@ Write-Ok "Reloaded-II configurado ($rutaLoader)"
 
 # --- 5. Escala DPI --------------------------------------------------------------------------
 Write-Paso '5/7  Escala DPI de Windows para el juego'
-# Igual que Propiedades > Compatibilidad > "Invalidar el comportamiento de escalado de PPP alto: Aplicación".
-# Sin esto, con la escala de Windows al 125 % la ventana de 1920x1080 se sale de la pantalla.
+# Igual que Propiedades > Compatibilidad > "Invalidar el comportamiento de escalado de PPP alto: Sistema".
+# El juego trabaja en coordenadas lógicas y Windows lo escala. Con la escala al 125 % o 150 % y otros
+# modos (HIGHDPIAWARE), la imagen salía ampliada y recortada (probado en una laptop al 125 %).
 $capas = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers')
 try {
     $actual = [string]$capas.GetValue($ExeJuego, '')
-    if ($actual -match 'HIGHDPIAWARE') { Write-Ok 'Ya estaba configurado' }
+    $banderas = @($actual -split '\s+' | Where-Object { $_ -and $_ -ne '~' -and $_ -ne 'HIGHDPIAWARE' -and $_ -ne 'DPIUNAWARE' })
+    $valor = (@('~') + $banderas + 'DPIUNAWARE') -join ' '
+    if ($actual -eq $valor) { Write-Ok 'Ya estaba configurado' }
     else {
-        if ($actual) { $valor = "$actual HIGHDPIAWARE" } else { $valor = '~ HIGHDPIAWARE' }
         $capas.SetValue($ExeJuego, $valor, [Microsoft.Win32.RegistryValueKind]::String)
-        Write-Ok 'Tsonic_win.exe maneja su propia escala DPI (solo afecta a este juego)'
+        Write-Ok 'Windows escala Tsonic_win.exe (solo afecta a este juego)'
     }
 } finally { $capas.Close() }
 
@@ -502,13 +501,18 @@ foreach ($arquitectura in 'x64', 'x86') {
 Write-Paso '7/7  Lanzador y accesos directos'
 Copy-Item -LiteralPath (Join-Path $RepoDir 'jugar.ps1') -Destination (Join-Path $Destino 'jugar.ps1') -Force
 Unblock-File -LiteralPath (Join-Path $Destino 'jugar.ps1')   # si el repo se bajó como ZIP, quita la marca "descargado de internet"
-if ($ResolucionFija) { Write-Ok 'jugar.ps1 copiado (resolución fija)' } else { Write-Ok 'jugar.ps1 copiado (ajusta la resolución a la pantalla principal en cada arranque)' }
-New-AccesoDirecto (Join-Path $Destino 'Jugar Sonic Heroes (Xbox).lnk')
-Write-Ok "Creado en la carpeta del juego"
-if (-not $SinAccesoDirecto) {
-    New-AccesoDirecto (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Sonic Heroes (Xbox).lnk')
-    Write-Ok 'Creado "Sonic Heroes (Xbox)" en el escritorio'
+if ($ResolucionFija) { Write-Ok 'jugar.ps1 copiado (resolución fija)' } else { Write-Ok 'jugar.ps1 copiado (ajusta la resolución a la pantalla elegida en cada arranque)' }
+# Pantalla 1 = principal de Windows; "pantalla 2" = la otra (si hay un segundo monitor conectado).
+$accesos = @(
+    @{ Carpeta = $Destino; Nombre = 'Jugar Sonic Heroes (Xbox)' }
+    @{ Carpeta = [Environment]::GetFolderPath('Programs'); Nombre = 'Sonic Heroes' }
+)
+if (-not $SinAccesoDirecto) { $accesos += @{ Carpeta = [Environment]::GetFolderPath('Desktop'); Nombre = 'Sonic Heroes (Xbox)' } }
+foreach ($a in $accesos) {
+    New-AccesoDirecto (Join-Path $a.Carpeta "$($a.Nombre).lnk") 1
+    if (-not $ResolucionFija) { New-AccesoDirecto (Join-Path $a.Carpeta "$($a.Nombre) - pantalla 2.lnk") 2 }
 }
+Write-Ok 'Accesos directos "Sonic Heroes" (pantalla principal) y "... - pantalla 2" en el menú Inicio, el escritorio y la carpeta del juego'
 
 Write-Host ''
 Write-Host 'Listo. Conecta el control Xbox y abre "Sonic Heroes (Xbox)".' -ForegroundColor Green
